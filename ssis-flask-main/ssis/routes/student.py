@@ -1,4 +1,3 @@
-
 from flask import Blueprint
 from flask import current_app as app
 from flask import render_template, request, redirect, url_for, jsonify
@@ -39,10 +38,25 @@ def check_file_size(picture):
 def student():
     colleges = College.get_all()
     courses = Course.get_all()
-    students = Student.get_all()
-    return render_template('student_home.html', colleges=colleges , courses=courses,students=students)
 
-print("🔁 Calling student.add() with:", student.__dict__)
+    # 📄 Pagination logic
+    page = request.args.get('page', default=1, type=int)
+    per_page = 50
+    offset = (page - 1) * per_page
+
+    # Get paginated student list and total count
+    students = Student.get_paginated(limit=per_page, offset=offset)
+    total_count = Student.get_total_count()
+    total_pages = (total_count + per_page - 1) // per_page  # ceiling division
+
+    return render_template(
+        'student_home.html',
+        colleges=colleges,
+        courses=courses,
+        students=students,
+        page=page,
+        total_pages=total_pages
+    )
 
 @student_bp.route("/student/add", methods=['POST'])
 def student_add():
@@ -55,9 +69,7 @@ def student_add():
     print("Gender:", request.form.get("student_gender"))
     print("✅ Student added successfully")
 
-
-
-    id = request.form.get('student_id')
+    id = request.form.get('student_id', '').strip()
     firstname = request.form.get('student_first_name')
     lastname = request.form.get('student_last_name')
     course_code = request.form.get('student_course_code')
@@ -70,8 +82,6 @@ def student_add():
     picture = request.files['formFile']
     print("📂 Picture object:", picture)
     print("📂 Picture filename:", picture.filename)
-
-
 
     # Check if student ID is already taken
     exist_student = Student.check_existing_id(id)
@@ -110,18 +120,23 @@ def student_add():
 @student_bp.route("/student/delete", methods=['POST'])
 def student_delete():
     try:
-        id = request.form.get('csasdsda')
+        id = request.form.get('student_id')  # FIXED: use correct field name
+        if not id:
+            return jsonify({'error': 'Missing student ID'})
+
         student = Student.get_one(id)
+        if not student:
+            return jsonify({'error': 'Student not found'})
+
         if student.picture:
             public_id = get_public_id_from_url(student.picture)
-            result = uploader.destroy(public_id)
+            if public_id:
+                uploader.destroy(public_id)
+
         student.delete()
         return redirect(url_for("student_bp.student"))
     except Exception as e:
-        error = f"Error: {e}"
-        return jsonify({
-            'error' : error
-        })
+        return jsonify({'error': f"Error: {e}"})
 
 
 @student_bp.route("/student/edit", methods=['POST'])
@@ -151,7 +166,9 @@ def student_edit():
                 if picture and allowed_file(picture.filename):
                     if student.picture:
                         public_id = get_public_id_from_url(student.picture)
-                        result = uploader.destroy(public_id)
+                        if public_id:
+                            uploader.destroy(public_id)
+
                     result1 = upload(picture, folder= Config.CLOUDINARY_FOLDER)
                     student.picture = result1['secure_url']
                 elif not picture and not student.picture :
@@ -172,7 +189,9 @@ def student_edit():
             if picture and allowed_file(picture.filename):
                 if student.picture:
                     public_id = get_public_id_from_url(student.picture)
-                    result = uploader.destroy(public_id)
+                    if public_id:
+                        uploader.destroy(public_id)
+
                 result1 = upload(picture, folder= Config.CLOUDINARY_FOLDER)
                 student.picture = result1['secure_url']
             elif not picture and not student.picture :
@@ -206,6 +225,8 @@ def student_search():
                 filter_message= "Student Year"
             elif filter == "6":
                 filter_message = "Student Gender"
+            elif filter == "7":
+                filter_message = "Student College"
             return render_template('student_home.html', studentInput = input, search = True, hideAdd = True , filter_message=filter_message)
         else:
             return render_template('student_home.html', students=students, hideAdd = True, search = True, studentInput=input)

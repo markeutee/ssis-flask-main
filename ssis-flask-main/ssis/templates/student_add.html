@@ -1,3 +1,4 @@
+
 <div
   class="modal fade"
   id="addStudent"
@@ -5,8 +6,9 @@
   data-bs-keyboard="false"
   tabindex="-1"
   aria-labelledby="addStudentLabel"
-  aria-hidden="true"
+  aria-hidden="true">
 
+  <!-- 🟡 This was previously outside the modal container. It MUST be inside -->
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -70,7 +72,7 @@
               placeholder="Course name"
               autocomplete="off"
               required
-              value="{{ request.form.get('student_first_name', '') }}"
+              value="{{ request.form.get('student_last_name', '') }}"
             />
             <label
               for="student_last_name"
@@ -152,33 +154,3 @@
     </div>
   </div>
 </div>
-
-<script>
-document.getElementById("addStudentForm").addEventListener("submit", function (e) {
-  e.preventDefault(); // Prevent normal form submit
-
-  let form = document.getElementById("addStudentForm");
-  let formData = new FormData(form);
-
-  fetch("/student/add", {
-  method: "POST",
-  body: formData,
-})
-.then((response) => response.json())
-.then((data) => {
-  console.log("✅ Server Response:", data);
-
-  if (data.message === "Student added successfully") {
-    alert("🎉 Student added!");
-    document.getElementById("studentForm").reset();
-    document.getElementById("previewImage").src = "/static/picture.png"; // or any default
-    closeModal(); // if you're using a modal
-  } else if (data.error) {
-    alert("❌ Error: " + data.error);
-  }
-})
-.catch((error) => {
-  console.error("❌ Error submitting form:", error);
-});
-});
-</script>

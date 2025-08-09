@@ -2,6 +2,9 @@
 from flask import Flask
 from .extension import mysql
 from config import Config
+
+
+
 import cloudinary
 
 def create_app():
@@ -19,9 +22,10 @@ def create_app():
     )
 
     # ✅ Register routes
-    from .routes import college, course, student
+    from .routes import college, course, student, email
     app.register_blueprint(college.college_bp)
     app.register_blueprint(course.course_bp)
     app.register_blueprint(student.student_bp)
+    app.register_blueprint(email.email_bp)
 
     return app

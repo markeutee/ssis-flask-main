@@ -7,7 +7,9 @@ import os
 
 # ✅ Load .env file explicitly from the root directory
 
-load_dotenv(dotenv_path=Path('.') / '.env')
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
+
 
 class Config:
     # ✅ Flask settings (optional)
@@ -24,7 +26,9 @@ class Config:
 
     # ✅ Cloudinary settings
     # ✅ Corrected Cloudinary settings (MUST match .env variable names)
-    CLOUDINARY_CLOUD_NAME = os.getenv('CLOUD_NAME')
-    CLOUDINARY_API_KEY = os.getenv('CLOUD_API_KEY')
-    CLOUDINARY_API_SECRET = os.getenv('CLOUD_API_SECRET')
+    CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET')
     CLOUDINARY_FOLDER = os.getenv('CLOUDINARY_FOLDER') or 'student_pics'
+    SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+    
