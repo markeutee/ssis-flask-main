@@ -1,3 +1,4 @@
+#routes/student.py
 from flask import Blueprint
 from flask import current_app as app
 from flask import render_template, request, redirect, url_for, jsonify
@@ -26,7 +27,7 @@ def get_public_id_from_url(url):
     return match.group(1) if match else None
 
 def check_file_size(picture):
-    maxsize = 1 * 1024 * 1024  # 1MB
+    maxsize = 16 * 1024 * 1024  # 1MB
     picture.seek(0, 2)  # Move to end of file
     size = picture.tell()  # Get size in bytes
     picture.seek(0)  # Reset to beginning
@@ -41,7 +42,7 @@ def student():
 
     # 📄 Pagination logic
     page = request.args.get('page', default=1, type=int)
-    per_page = 50
+    per_page = 10  # Number of students per page
     offset = (page - 1) * per_page
 
     # Get paginated student list and total count
@@ -120,13 +121,13 @@ def student_add():
 @student_bp.route("/student/delete", methods=['POST'])
 def student_delete():
     try:
-        id = request.form.get('student_id')  # FIXED: use correct field name
+        id = request.form.get('student_id')
         if not id:
-            return jsonify({'error': 'Missing student ID'})
+            return jsonify({'error': 'Missing student ID'}), 400
 
         student = Student.get_one(id)
         if not student:
-            return jsonify({'error': 'Student not found'})
+            return jsonify({'error': 'Student not found'}), 404
 
         if student.picture:
             public_id = get_public_id_from_url(student.picture)
@@ -134,10 +135,9 @@ def student_delete():
                 uploader.destroy(public_id)
 
         student.delete()
-        return redirect(url_for("student_bp.student"))
+        return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': f"Error: {e}"})
-
+        return jsonify({'error': f"Error: {str(e)}"}), 500
 
 @student_bp.route("/student/edit", methods=['POST'])
 def student_edit():

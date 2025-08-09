@@ -1,4 +1,4 @@
-
+#init.py
 from flask import Flask
 from .extension import mysql
 from config import Config

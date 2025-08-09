@@ -17,16 +17,11 @@
           </h1>
         </div>
         <div class="modal-body">
-          <div
-            class="d-flex justify-content-between flex-column align-items-center"
-          >
-            <p>Are you sure you want to delete the student?</p>
-          </div>
-
-          <!-- Hidden input to store student ID -->
+          <p>
+            Are you sure you want to delete the student with ID:
+            <strong><span id="studentIdDisplay"></span></strong>?
+          </p>
           <input type="hidden" id="deleteStudentId" name="student_id" />
-
-          <!-- Error alert -->
           <div
             class="alert alert-danger"
             id="errordeletstdemsg"
@@ -42,52 +37,14 @@
           >
             Cancel
           </button>
-          <button
-            type="submit"
-            class="btn btn-danger fs-5"
-          >
+          <button type="submit" class="btn btn-danger fs-5" id="confirmDelete">
             Delete
           </button>
         </div>
       </div>
     </form>
   </div>
+  
 </div>
+<div class="alert alert-success" id="successdeletstdemsg" role="alert" style="display: none"></div>
 
-<script>
-  // When delete button is clicked
-  $(".delete-Student").on("click", function () {
-    const studentId = $(this).data("student-id");
-    $("#deleteStudentId").val(studentId); // Store ID in hidden input
-  });
-
-  // Handle delete form submission
-  $("#deleteStudentForm").off("submit").on("submit", function (e) {
-    e.preventDefault();
-    const studentId = $("#deleteStudentId").val();
-
-    $("body").append(`
-      <div class="loading-overlay">
-        <div class="spinner-border me-3" style="width: 3rem; height: 3rem;">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <h2>Deleting Student. This should only take a minute...</h2>
-      </div>
-    `);
-
-    $.ajax({
-      type: "POST",
-      url: "/student/delete",
-      data: { student_id: studentId },
-    })
-    .done(function (data) {
-      $(".loading-overlay").remove();
-      if (data.error) {
-        $("#errordeletstdemsg").text(data.error).show();
-      } else {
-        alert("Successfully deleted student: " + studentId);
-        window.location.href = "/student";
-      }
-    });
-  });
-</script>
