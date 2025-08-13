@@ -27,10 +27,10 @@ def get_public_id_from_url(url):
     return match.group(1) if match else None
 
 def check_file_size(picture):
-    maxsize = 16 * 1024 * 1024  # 1MB
-    picture.seek(0, 2)  # Move to end of file
+    maxsize = 1 * 1024 * 1024  # 1MB
+    picture.seek(0, 2)  
     size = picture.tell()  # Get size in bytes
-    picture.seek(0)  # Reset to beginning
+    picture.seek(0)  
     print("📸 Uploaded picture size:", size, "bytes")
     return size <= maxsize
 
@@ -76,47 +76,46 @@ def student_add():
     course_code = request.form.get('student_course_code')
     year = request.form.get('student_year')
     gender = request.form.get('student_gender')
-    if 'formFile' not in request.files:
-        print("🚫 No file part in request.files")
-        return jsonify({'error': 'No file part in form'})
 
-    picture = request.files['formFile']
-    print("📂 Picture object:", picture)
-    print("📂 Picture filename:", picture.filename)
+    # Get file, but no error if not present
+    picture = request.files.get('formFile')  # changed here from request.files['formFile']
 
     # Check if student ID is already taken
     exist_student = Student.check_existing_id(id)
     if exist_student:
-        return jsonify({ 'error': f"Student ID: {id} is already taken" })
+        return jsonify({'error': f"Student ID: {id} is already taken"})
 
-    # Check picture validity
-    if not picture or not allowed_file(picture.filename):
-        return jsonify({ 'error': 'Image is required and must be PNG, JPG, or JPEG' })
+    picture_url = None  # default no picture
 
-    if not check_file_size(picture):
-        return jsonify({ 'error': 'Max file size is 1MB' })
+    # Only validate picture if user uploaded one
+    if picture and picture.filename != '':
+        if not allowed_file(picture.filename):
+            return jsonify({'error': 'Image is required and must be PNG, JPG, or JPEG'})
 
-    try:
-        # Upload image to Cloudinary
-        result = upload(picture, folder=Config.CLOUDINARY_FOLDER)
+        if not check_file_size(picture):
+            return jsonify({'error': 'Max file size is 1MB'})
 
-        # Create and save student
-        student = Student(
-            id=id,
-            firstname=firstname,
-            lastname=lastname,
-            course_code=course_code,
-            year=year,
-            gender=gender,
-            picture=result['secure_url']
-        )
-        student.add()
+        try:
+            # Upload image to Cloudinary
+            result = upload(picture, folder=Config.CLOUDINARY_FOLDER)
+            picture_url = result['secure_url']
+        except Exception as e:
+            return jsonify({'error': str(e)})
 
-        # ✅ THIS IS THE FIX: send redirect URL in JSON
-        return jsonify({ 'redirect': url_for("student_bp.student") })
+    # If no picture uploaded, picture_url stays None (or you can assign default here if you want)
+    student = Student(
+        id=id,
+        firstname=firstname,
+        lastname=lastname,
+        course_code=course_code,
+        year=year,
+        gender=gender,
+        picture=picture_url  # None or uploaded URL
+    )
+    student.add()
 
-    except Exception as e:
-        return jsonify({ 'error': str(e) })
+    return jsonify({'redirect': url_for("student_bp.student")})
+
 
 @student_bp.route("/student/delete", methods=['POST'])
 def student_delete():
@@ -148,58 +147,49 @@ def student_edit():
     course_code = request.form.get('edit_student_course_code')
     year = request.form.get('edit_student_year')
     gender = request.form.get('edit_student_gender')
-    picture = request.files['editFormFile']
-
-    error = f"{pastid} {id} {firstname} {lastname} {course_code} {year} {gender} {picture.filename}"
+    picture = request.files.get('editFormFile')  # ✅ safe get
 
     student = Student.get_one(pastid)
+
+    # Check ID conflicts
     if id != pastid:
         exist_student = Student.get_one(id)
         if exist_student:
-            error = f"Student ID: {id} is already taken"
-            return jsonify({'error' : error})
-        else:
-            try:
-                student = Student(id=id,firstname=firstname,lastname=lastname,course_code=course_code,year=year,gender=gender)
-                if not check_file_size(picture):
-                    return jsonify({'error': 'Max Size Limit is: 1mb' })
-                if picture and allowed_file(picture.filename):
-                    if student.picture:
-                        public_id = get_public_id_from_url(student.picture)
-                        if public_id:
-                            uploader.destroy(public_id)
+            return jsonify({'error': f"Student ID: {id} is already taken"})
 
-                    result1 = upload(picture, folder= Config.CLOUDINARY_FOLDER)
-                    student.picture = result1['secure_url']
-                elif not picture and not student.picture :
-                    return jsonify({ 'error': 'Image is required and pictures only'})
-                student.update(pastid)
-                return redirect(url_for("student_bp.student"))
-            except Exception as e:
-                return jsonify({'error': e})
-    else:
-        try:
-            student.firstname = firstname
-            student.lastname = lastname
-            student.course_code = course_code
-            student.year = year
-            student.gender = gender
+    try:
+        # Update basic info
+        student.id = id
+        student.firstname = firstname
+        student.lastname = lastname
+        student.course_code = course_code
+        student.year = year
+        student.gender = gender
+
+        # ✅ Only update picture if a new one is uploaded
+        if picture and picture.filename.strip():
+            if not allowed_file(picture.filename):
+                return jsonify({'error': 'Image must be PNG, JPG, or JPEG'})
             if not check_file_size(picture):
-                return jsonify({'error': 'Max Size Limit is: 1mb or 1024kb' })
-            if picture and allowed_file(picture.filename):
-                if student.picture:
-                    public_id = get_public_id_from_url(student.picture)
-                    if public_id:
-                        uploader.destroy(public_id)
+                return jsonify({'error': 'Max Size Limit is: 1MB'})
 
-                result1 = upload(picture, folder= Config.CLOUDINARY_FOLDER)
-                student.picture = result1['secure_url']
-            elif not picture and not student.picture :
-                return jsonify({ 'error': 'Image is required and pictures only'})
-            student.update(id)
-            return redirect(url_for("student_bp.student"))
-        except Exception as e:
-            return jsonify({'error' : e})
+            # Delete old picture from Cloudinary
+            if student.picture:
+                public_id = get_public_id_from_url(student.picture)
+                if public_id:
+                    uploader.destroy(public_id)
+
+            # Upload new picture
+            result1 = upload(picture, folder=Config.CLOUDINARY_FOLDER)
+            student.picture = result1['secure_url']
+
+        # ✅ If no new picture uploaded → keep existing one
+
+        student.update(pastid if id != pastid else id)
+        return redirect(url_for("student_bp.student"))
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
         
 
 @student_bp.route("/student/search", methods=['GET','POST'])

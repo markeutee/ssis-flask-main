@@ -25,13 +25,25 @@ class Student():
     
     def update(self, id):
         cursor = self.connection.cursor()
-        cursor.execute("""
-            UPDATE student
-            SET id=%s, firstname=%s, lastname=%s, course_code=%s, year=%s, gender=%s, picture=%s
-            WHERE id=%s
-        """, (self.id, self.firstname, self.lastname, self.course_code, self.year, self.gender, self.picture, id))
+
+        if self.picture:
+            # Update including picture
+            cursor.execute("""
+                UPDATE student
+                SET id=%s, firstname=%s, lastname=%s, course_code=%s, year=%s, gender=%s, picture=%s
+                WHERE id=%s
+            """, (self.id, self.firstname, self.lastname, self.course_code, self.year, self.gender, self.picture, id))
+        else:
+            # Update without changing picture
+            cursor.execute("""
+                UPDATE student
+                SET id=%s, firstname=%s, lastname=%s, course_code=%s, year=%s, gender=%s
+                WHERE id=%s
+            """, (self.id, self.firstname, self.lastname, self.course_code, self.year, self.gender, id))
+
         self.connection.commit()
         cursor.close()
+
 
     def delete(self):
         cursor = self.connection.cursor()
@@ -49,8 +61,8 @@ class Student():
             SELECT student.id, student.firstname, student.lastname, student.course_code, student.year, student.gender,
                    course.college_code, student.picture
             FROM student
-            INNER JOIN course ON student.course_code = course.code
-            INNER JOIN college ON course.college_code = college.code
+            LEFT JOIN course ON student.course_code = course.code
+            LEFT JOIN college ON course.college_code = college.code
         """
 
         if filter == "0":
@@ -118,7 +130,7 @@ class Student():
     @classmethod
     def get_all(cls,table_name = 'student'):
         cursor = mysql.connection.cursor()
-        cursor.execute(f"SELECT student.id, student.firstname, student.lastname, student.course_code, student.year, student.gender, course.college_code , student.picture FROM student INNER JOIN course ON student.course_code = course.code INNER JOIN college ON course.college_code = college.code ORDER BY student.id")
+        cursor.execute(f"SELECT student.id, student.firstname, student.lastname, student.course_code, student.year, student.gender, course.college_code , student.picture FROM student LEFT JOIN course ON student.course_code = course.code LEFT JOIN college ON course.college_code = college.code ORDER BY student.id")
         student = []
         for student_data in cursor.fetchall():
             courses = Student(id = student_data[0] , firstname = student_data[1], lastname=student_data[2], course_code=student_data[3], year=student_data[4], gender=student_data[5], college=student_data[6], picture = student_data[7])
@@ -152,8 +164,8 @@ class Student():
             SELECT student.id, student.firstname, student.lastname, student.course_code, 
                    student.year, student.gender, course.college_code, student.picture
             FROM student
-            INNER JOIN course ON student.course_code = course.code
-            INNER JOIN college ON course.college_code = college.code
+            LEFT JOIN course ON student.course_code = course.code
+            LEFT JOIN college ON course.college_code = college.code
             ORDER BY student.id
             LIMIT %s OFFSET %s
         """, (limit, offset))

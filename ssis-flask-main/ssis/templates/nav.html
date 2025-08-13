@@ -1,16 +1,15 @@
 <div class="container">
-  <nav class="d-flex justify-content-center py-3">
+  <nav>
     <ul class="nav nav-pills">
       <li class="nav-item">
-        <a href="{{url_for('student_bp.student')}}" class="nav-link">Student</a>
+        <a href="{{ url_for('student_bp.student') }}" class="nav-link {% if active_page == 'student' %}active{% endif %}">Student</a>
       </li>
       <li class="nav-item">
-        <a href="{{url_for('course_bp.course')}}" class="nav-link">Courses</a>
+        <a href="{{ url_for('course_bp.course') }}" class="nav-link {% if active_page == 'course' %}active{% endif %}">Courses</a>
       </li>
       <li class="nav-item">
-        <a href="{{url_for('college_bp.college')}}" class="nav-link">College</a>
+        <a href="{{ url_for('college_bp.college') }}" class="nav-link {% if active_page == 'college' %}active{% endif %}">College</a>
       </li>
     </ul>
   </nav>
 </div>
-<hr />

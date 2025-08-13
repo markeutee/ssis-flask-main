@@ -23,6 +23,14 @@ $(document).ready(function () {
   $("#addStudentForm").on("submit", function (event) {
     event.preventDefault();
 
+        // ✅ INSERT FORMAT CHECK HERE
+    const studentId = $("input[name='student_id']").val();
+    const idPattern = /^\d{4}-\d{4}$/;
+    if (!idPattern.test(studentId)) {
+      $("#erroraddstdmsg").text("Invalid ID format. Use xxxx-xxxx").show();
+      return; // stop submission
+    }
+
     const preview2 = $('#photo-preview');
 
     $('body').append(`
@@ -154,6 +162,7 @@ $('#deleteStudent').on('show.bs.modal', function (event) {
 
   // --- Edit Student ---
   $(".edit-Student").on("click", function () {
+    
     var id = $(this).data("student-id");
     var firstname = $(this).data("student-firstname");
     var lastname = $(this).data("student-lastname");
@@ -161,6 +170,8 @@ $('#deleteStudent').on('show.bs.modal', function (event) {
     var year = $(this).data("student-year");
     var gender = $(this).data("student-gender");
     var picture = $(this).data("student-picture");
+    
+    
 
     const preview = $('#edit_photo_preview');
     if (picture !== 'None') {
@@ -178,7 +189,13 @@ $('#deleteStudent').on('show.bs.modal', function (event) {
 
     $("#editStudentForm").off("submit").on("submit", function (event) {
       event.preventDefault();
-
+      // Inside the edit form submit handler, add this at the top:
+      const editStudentId = $("#edit_student_id").val();
+      const idPattern = /^\d{4}-\d{4}$/;
+      if (!idPattern.test(editStudentId)) {
+        $("#erroreditstdmsg").text("Invalid ID format. Use xxxx-xxxx").show();
+        return; // stop submission
+}
       var formData = new FormData(this);
       formData.append('pastid', id);
 
