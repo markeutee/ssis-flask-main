@@ -3,14 +3,15 @@ from ..extension import mysql
 import MySQLdb.cursors
 
 class Student():
-    def __init__(self, id=None, firstname=None, lastname=None, course_code=None, year=None, gender=None, college=None, picture=None):
+    def __init__(self, id=None, firstname=None, lastname=None, course_code=None, year=None, gender=None, college_code=None, college_name=None, picture=None):
         self.id = id
         self.firstname = firstname
         self.lastname = lastname
         self.course_code = course_code
         self.year = year
         self.gender = gender
-        self.college = college
+        self.college_code = college_code
+        self.college_name = college_name
         self.connection = mysql.connection
         self.picture = picture
 
@@ -59,41 +60,49 @@ class Student():
 
         base_query = """
             SELECT student.id, student.firstname, student.lastname, student.course_code, student.year, student.gender,
-                   course.college_code, student.picture
+                college.name AS college_name, student.picture
             FROM student
             LEFT JOIN course ON student.course_code = course.code
             LEFT JOIN college ON course.college_code = college.code
         """
 
-        if filter == "0":
+        search_param = f"%{input}%"
+
+        if filter == "0":  # All
             query = base_query + """
-                WHERE student.id LIKE %s OR student.firstname LIKE %s OR student.lastname LIKE %s
-                OR student.course_code LIKE %s OR student.year LIKE %s OR student.gender LIKE %s
+                WHERE student.id LIKE %s
+                OR student.firstname LIKE %s
+                OR student.lastname LIKE %s
+                OR student.course_code LIKE %s
+                OR student.year LIKE %s
+                OR student.gender LIKE %s
+                OR college.name LIKE %s
             """
-            params = tuple([f"%{input}%"] * 6)
+            params = tuple([search_param] * 7)
         elif filter == "1":
             query = base_query + " WHERE student.id LIKE %s"
-            params = (f"%{input}%",)
+            params = (search_param,)
         elif filter == "2":
             query = base_query + " WHERE student.firstname LIKE %s"
-            params = (f"%{input}%",)
+            params = (search_param,)
         elif filter == "3":
             query = base_query + " WHERE student.lastname LIKE %s"
-            params = (f"%{input}%",)
+            params = (search_param,)
         elif filter == "4":
             query = base_query + " WHERE student.course_code LIKE %s"
-            params = (f"%{input}%",)
+            params = (search_param,)
         elif filter == "5":
             query = base_query + " WHERE student.year LIKE %s"
-            params = (f"%{input}%",)
+            params = (search_param,)
         elif filter == "6":
             query = base_query + " WHERE student.gender = %s"
-            params = (f"{input}",)
+            params = (input,)
         elif filter == "7":
-            query = base_query + """
-                WHERE college.name LIKE %s OR college.code LIKE %s
-            """
-            params = (f"%{input}%", f"%{input}%")
+            query = base_query + " WHERE college.name LIKE %s"
+            params = (search_param,)
+        elif filter == "8":
+            query = base_query + " WHERE college.name LIKE %s"
+            params = (search_param,)
         else:
             query = base_query
             params = ()
@@ -109,11 +118,20 @@ class Student():
                 course_code=student_data[3],
                 year=student_data[4],
                 gender=student_data[5],
-                college=student_data[6],
+                college_name=student_data[6],  # Only name
                 picture=student_data[7]
             ))
+
         cursor.close()
         return students
+
+
+    
+    
+
+
+
+
 
     
 
@@ -128,15 +146,33 @@ class Student():
     
     
     @classmethod
-    def get_all(cls,table_name = 'student'):
+    def get_all(cls, table_name='student'):
         cursor = mysql.connection.cursor()
-        cursor.execute(f"SELECT student.id, student.firstname, student.lastname, student.course_code, student.year, student.gender, course.college_code , student.picture FROM student LEFT JOIN course ON student.course_code = course.code LEFT JOIN college ON course.college_code = college.code ORDER BY student.id")
-        student = []
+        cursor.execute("""
+            SELECT student.id, student.firstname, student.lastname, student.course_code, 
+                student.year, student.gender, college.code AS college_code, college.name AS college_name, student.picture
+            FROM student
+            LEFT JOIN course ON student.course_code = course.code
+            LEFT JOIN college ON course.college_code = college.code
+            ORDER BY student.id
+        """)
+        students = []
         for student_data in cursor.fetchall():
-            courses = Student(id = student_data[0] , firstname = student_data[1], lastname=student_data[2], course_code=student_data[3], year=student_data[4], gender=student_data[5], college=student_data[6], picture = student_data[7])
-            student.append(courses)
+            student = Student(
+                id=student_data[0],
+                firstname=student_data[1],
+                lastname=student_data[2],
+                course_code=student_data[3],
+                year=student_data[4],
+                gender=student_data[5],
+                college_code=student_data[6],
+                college_name=student_data[7],
+                picture=student_data[8]
+            )
+            students.append(student)
         cursor.close()
-        return student
+        return students
+
     
     @classmethod
     def check_existing_id(cls,id):
@@ -162,7 +198,7 @@ class Student():
         cursor = mysql.connection.cursor()
         cursor.execute("""
             SELECT student.id, student.firstname, student.lastname, student.course_code, 
-                   student.year, student.gender, course.college_code, student.picture
+                student.year, student.gender, college.name AS college_name, student.picture
             FROM student
             LEFT JOIN course ON student.course_code = course.code
             LEFT JOIN college ON course.college_code = college.code
@@ -172,19 +208,22 @@ class Student():
         
         students = []
         for student_data in cursor.fetchall():
-            student = Student(
+            students.append(Student(
                 id=student_data[0],
                 firstname=student_data[1],
                 lastname=student_data[2],
                 course_code=student_data[3],
                 year=student_data[4],
                 gender=student_data[5],
-                college=student_data[6],
+                college_name=student_data[6],  # Only name
                 picture=student_data[7]
-            )
-            students.append(student)
+            ))
         cursor.close()
         return students
+
+
+
+
 
     @classmethod
     def get_total_count(cls):

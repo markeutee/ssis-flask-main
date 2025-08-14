@@ -2,9 +2,11 @@
 
 from ssis import create_app
 from dotenv import load_dotenv
+from flask import Flask
 
+app = Flask(__name__)
 
-load_dotenv()  # Load .env variables
+load_dotenv()  
 
 
 app = create_app()
